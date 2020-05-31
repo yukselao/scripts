@@ -1,0 +1,99 @@
+
+# configure postgresql for remote connectivity & generate test data
+	
+# set listener ip address:
+root@kali-aliokan:/# grep listen /etc/postgresql/11/main/postgresql.conf  
+listen_addresses = '*'		# what IP address(es) to listen on;
+
+# permit authentication
+root@kali-aliokan:/# vim /etc/postgresql/11/main/pg_hba.conf
+host all all 0.0.0.0/0 md5
+
+# set password:
+root@kali-aliokan:/etc/postgresql/11/main# sudo -u postgres psql
+psql (11.1 (Debian 11.1-2))
+Type "help" for help.
+
+postgres=# \password test
+Enter new password: 
+Enter it again: 
+
+##### db credentials: 
+db ip: 172.16.60.124
+db port: 5432
+db user: test
+db name: test
+db pass: test123 
+db table name: account
+####
+
+
+# test remote connection on aio-qradar terminal first:
+[root@qradar ~]# psql -U test -h 172.16.60.124 -p 5432 test
+Password for user test: 
+psql (9.6.10, server 11.1 (Debian 11.1-2))
+WARNING: psql major version 9.6, server major version 11.
+         Some psql features might not work.
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+test=> \dt
+        List of relations
+ Schema |  Name   | Type  | Owner 
+--------+---------+-------+-------
+ public | account | table | test
+(1 row)
+
+test=> select * from account;
+ user_id | username | password |    email     |         created_on         | last_login 
+---------+----------+----------+--------------+----------------------------+------------
+       3 | ali      | 123      | ali@ibm.com  | 2011-04-16 10:21:47.484538 | 
+       6 | ali2     | 123      | ali2@ibm.com | 2011-04-16 10:21:47.484538 | 
+       7 | ali3     | 123      | ali3@ibm.com | 2011-04-16 10:21:47.484538 | 
+       8 | ali4     | 123      | ali4@ibm.com | 2019-04-16 10:34:18.264184 | 
+       9 | ali5     | 123      | ali5@ibm.com | 2019-04-16 10:34:52.652006 | 
+      10 | ali6     | 123      | ali6@ibm.com | 2019-04-16 10:36:24.848851 | 
+      11 | ali7     | 123      | ali7@ibm.com | 2019-04-16 10:36:32.737522 | 
+
+postgres@kali-aliokan:/tmp$ cat insert-test-data.sh 
+#!/bin/bash
+echo "insert operation started..."
+for i in $(seq $1 $2); do
+	sql="insert into account (username, password, email, created_on, last_login) values ('ali${i}','passwd${i}','aliokan.yuksel${i}@ibm.com',current_timestamp,null);"
+	psql -d test -c "$sql"
+done
+echo insert operation completed successfully.
+echo last 10 records: 
+psql -d test -c "select user_id, username  from account order by user_id desc limit 10"
+
+postgres@kali-aliokan:/tmp$ ./insert-test-data.sh 1 10
+insert operation started...
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+insert operation completed successfully.
+last 10 records:
+ user_id | username 
+---------+----------
+      79 | ali10
+      78 | ali9
+      77 | ali8
+      76 | ali7
+      75 | ali6
+      74 | ali5
+      73 | ali4
+      72 | ali3
+      71 | ali2
+      70 | ali1
+(10 rows)
+
+
+
+
