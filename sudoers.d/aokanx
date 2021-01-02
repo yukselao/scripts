@@ -1,0 +1,2 @@
+# sudo right for aokanx user without password
+aokanx	ALL=(ALL)	NOPASSWD: ALL
